@@ -1,29 +1,29 @@
-# Use the official Node.js Alpine image as the base image
-FROM node:20-alpine
+FROM node:20
 
+COPY --from=chrishubert/whatsapp-web-api /usr/src/app /usr/src/app
 # Set the working directory
 WORKDIR /usr/src/app
 
-# Install Chromium
-ENV CHROME_BIN="/usr/bin/chromium-browser" \
+# Install Google Chrome and dependencies
+ENV CHROME_BIN="/usr/bin/google-chrome" \
     PUPPETEER_SKIP_CHROMIUM_DOWNLOAD="true" \
     NODE_ENV="production"
 RUN set -x \
-    && apk update \
-    && apk upgrade \
-    && apk add --no-cache \
+    && apt-get update \
+    && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    fonts-liberation \
     udev \
-    ttf-freefont \
-    chromium
+    --no-install-recommends \
+    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] https://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy package.json and package-lock.json to the working directory
-COPY package*.json ./
-
-# Install the dependencies
-RUN npm ci --only=production --ignore-scripts
-
-# Copy the rest of the source code to the working directory
-COPY . .
 
 # Expose the port the API will run on
 EXPOSE 3000
